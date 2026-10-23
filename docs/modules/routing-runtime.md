@@ -1,0 +1,44 @@
+---
+id: routing-runtime
+type: module
+layer: 3
+status: active
+summary: "路由、新增删除事务及后台服务隔离"
+load_when: ["路由", "新增", "删除", "回滚", "服务", "凭据"]
+globs: [RouterManager.App/RouterBackend.cs, RouterManager.App/BotLifecycle.cs, RouterManager.App/Assets/manager.mjs, RouterManager.App/Assets/lifecycle.mjs]
+related: [product-design, architecture-design, deployment-reference]
+depends_on: []
+last_updated: 2026-10-22
+token_est: 843
+module: routing-runtime
+implements: []
+public_api: [RouterBackend.ApplyAsync, RouterBackend.ServiceAsync, RouterBackend.AddBotAsync, RouterBackend.DeleteBotAsync, apply, createBot, deleteBot, runLifecycle]
+tests: [RouterManager.Tests/routes.test.mjs, RouterManager.Tests/lifecycle.test.mjs, RouterManager.Tests/pi-isolation.test.mjs]
+key_files: [RouterManager.App/RouterBackend.cs, RouterManager.App/BotLifecycle.cs, RouterManager.App/Assets/manager.mjs, RouterManager.App/Assets/lifecycle.mjs]
+---
+
+# 路由和生命周期
+
+RouterBackend 通过 operation SemaphoreSlim 串行操作；ApplyAsync / LifecycleAsync 把 helper 复制到 AppData/tools 再以 stdin 发送请求，避免凭据落入 OS 命令行。生命周期需同时复制 manager.mjs 和 lifecycle.mjs；不要在事务中取消子进程。
+
+manager.mjs 导出 validateRequest/updateProfile/apply/stopTask/register/waitOnline/assertIdle。CLI 模式包括 --serve、--bootstrap、--lifecycle。--serve 循环启动桥接并写 health；VBS+计划任务与 WPF 生命周期分离。register(m,launch) 支持 autoStart=false 时无登录触发器、launch=false 时只注册不运行。既有清单无 autoStart 字段按旧行为自启。
+
+lifecycle.mjs 负责 createBot/deleteBot/runLifecycle。新增以 managed-<App ID 后缀> 为 profile，任务为 FeishuRouterManager.<App ID>；清单有 createdByManager、source*、permission、autoStart。provision 在 runtimeRoot/bootstrap 中创建隔离配置和加密库，仅合并新 profile，保留原根字段。bootstrap 需要联网验证飞书凭据。profile 级 secrets.enc 和 .keystore.salt 成对拷贝。
+
+删除重新校验 App ID、忙碌与任务，导出 archives；移除活动 route/profile 与匹配的原生 pi 配置但不删工作目录/日志/历史/加密库。失败恢复已改文件和原任务状态；不把未改的其他 profile 回滚掉。没有成功删除的“撤销”按钮。
+
+pi 服务按机器人复制小桥接包、共享 dependencies junction；复制 .agent 设置/认证到独立目录，不把飞书 Secret 写入 pi-config.json。跨 Lark→pi 的访问策略依据应用 owner + 既有允许名单/群 @ 规则构建。应用 owner 读取失败时拒绝扩大访问。
+
+真实服务 stop/restart 涉及计划任务与匹配进程，可能中断工作；普通开发只跑临时 fixture。服务停止等待约 32 秒，上线等待约 40 秒；helper 失败恢复可能较久。不要用限时强杀绕过恢复。
+
+waitOnline 超时后只读查询目标计划任务状态/退出码并附到回滚错误；267009 是任务仍运行，不当成启动错误。--serve 顶层启动异常尝试脱敏写入 runtimeRoot/logs/bootstrap.log，避免服务日志尚未建立就丢失错误。RouterBackend.ApplyAsync 子进程 stdin/stdout/stderr 明确 UTF-8，防中文回滚原因乱码。查询失败不阻止原回滚。
+
+supervisor 为子桥接传递 FEISHU_ROUTER_MANAGER_ROOT（旧清单由 runtimeRoot 推导），用 App ID 读取专属 skill 目录，独立于工作目录、Agent home 和认证。实现见 [[bot-skills]]。移除机器人时原有运行数据保留策略也保留其 skills/skill-archives。
+
+事务设计见 [[architecture-design]]，产品确认见 [[product-design]]，运行备份见 [[deployment-reference]]。
+
+自动路由见 [[auto-routing]]。manager 现在导入 auto-route.mjs（后者导入 agent-data.mjs）；ApplyAsync / LifecycleAsync / 托管服务 / 策略保存统一复制所有 .mjs helpers。apply、策略、托管服务和托管删除共用 per-bot route-operation 锁；自动切换在锁内复查预期后端和当前开关。--auto-route worker 通过 stdin 接收目录，独立于旧 supervisor；--auto-policy 保存策略，--service 执行托管服务。自动启用触发的服务重启额外检查忙碌，普通手动强制停止/重启沿用 UI 原确认策略。
+
+supervisor 的 health.json 发布使用 createHealthWriter：Windows 文件读取者可能暂时拒绝 rename，EPERM/磁盘写入失败不应终止桥接；保留上一份心跳并在下一轮（2 秒）重试，bootstrap.log 每 30 秒最多记录一次 supervisor.health.write.failed，成功后记录一次 recovered。诊断日志本身失败也不向定时器抛出。health 额外记录 supervisorPid，未知的未捕获异常由 uncaughtExceptionMonitor 留下脱敏记录。配置/路由事务的 atomic 仍严格抛错并回滚，不共享心跳的容错语义。
+
+连接看门狗通过 connectionRecovery 记录连续未连接时间，恢复连接即清零，连续 90 秒未连接才回收子进程。不能用进程总运行时长作断线计时，否则在线超过 90 秒后的任意短暂重连都会被立刻重启。真实 pi 观察中的 connected→reconnecting 暴露了这一旧问题；与心跳 I/O 容错一起于 2026-10-22 修复。

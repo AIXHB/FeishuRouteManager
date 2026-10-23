@@ -1,0 +1,29 @@
+name: AI Project Continuity
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+jobs:
+  docs-continuity:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Validate document architecture and change records
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            node .ai-docs/docctl.js validate --project . --git-base "${{ github.event.pull_request.base.sha }}"
+          else
+            node .ai-docs/docctl.js validate --project .
+          fi
+      - name: Report conformance
+        run: node .ai-docs/docctl.js conformance --project .

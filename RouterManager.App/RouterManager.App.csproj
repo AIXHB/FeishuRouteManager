@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>WinExe</OutputType><TargetFramework>net8.0-windows</TargetFramework><UseWPF>true</UseWPF><AssemblyName>FeishuRouterManager</AssemblyName><ApplicationIcon>Assets\app-icon.ico</ApplicationIcon><ApplicationManifest>app.manifest</ApplicationManifest><Version>0.3.0</Version></PropertyGroup>
+  <ItemGroup><ProjectReference Include="../RouterManager.Core/RouterManager.Core.csproj"/><Content Include="Assets\**\*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" /></ItemGroup>
+</Project>

@@ -1,0 +1,16 @@
+/RouterManager.App/bin/
+/RouterManager.Core/bin/
+/RouterManager.Tests/bin/
+/RouterManager.App/obj/
+/RouterManager.Core/obj/
+/RouterManager.Tests/obj/
+/app/
+.vs/
+**/node_modules/
+artifacts/
+work/
+*.user
+*.suo
+.env
+.env.*
+!.env.example

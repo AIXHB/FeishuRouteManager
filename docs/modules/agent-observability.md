@@ -1,0 +1,34 @@
+---
+id: agent-observability
+type: module
+layer: 3
+status: active
+summary: "Agent 模型/额度读取、查询计划、结构日志与审计"
+load_when: ["模型", "额度", "配额", "日志", Codex, Antigravity]
+globs: [RouterManager.App/AgentServices.cs, RouterManager.App/LogWindow.cs, RouterManager.App/Assets/agent-data.mjs, RouterManager.Core/AgentDataModels.cs, RouterManager.Core/Preferences.cs, RouterManager.Core/RouteLogs.cs, RouterManager.Core/Redactor.cs]
+related: [product-design, development-guide]
+depends_on: []
+last_updated: 2026-10-21
+token_est: 485
+module: agent-observability
+implements: []
+public_api: [ModelsAsync, QuotasAsync, ReadRouteLogs, QuotaSchedule.TryBegin, RouteLogs.Read]
+tests: [RouterManager.Tests/agent-data.test.mjs, RouterManager.Tests/Program.cs]
+key_files: [RouterManager.App/AgentServices.cs, RouterManager.App/Assets/agent-data.mjs, RouterManager.Core/Preferences.cs, RouterManager.Core/RouteLogs.cs, RouterManager.App/LogWindow.cs]
+---
+
+# Agent 数据与日志
+
+AgentServices 解析机器人真实 profile 的 Codex binary/home 或 pi agentDir；子进程 UTF-8 JSON，60 秒限时，窗口退出/切换可取消。模型默认项 ID 为 default，其余 ID 来自实际目录，不人为罗列最新版模型。
+
+agent-data.mjs：Codex 先读 models_cache.json，刷新调用 app-server initialize→initialized→model/list（最多十页）；额度仅 account/rateLimits/read。Antigravity 使用 agy models 的 TSV；pi 读已有 models.json 和 ModelRuntime（allowModelNetwork:false），只返回已配置/认证服务商。
+
+QuotaSchedule 默认关闭、15 分钟，设置有效范围 5–1440；执行中不重入。QuotasAsync 按 backend/home/binary 去重，缓存 latest.json 并记录审计。仅 Codex 返回真实 quota windows，usedPercent 转剩余，缺失为 unavailable。Antigravity/pi 返回 unsupported；切勿伪造零额度或通过推理试探额度。
+
+RouteLogs 合并 Lark JSONL、pi service.log 和控制台 router-*.jsonl，按时间/机器人/Agent/级别/关键词筛选。旧日志从事件记录推断历史 Agent；缺失为 unknown，不能套用当前路由。读取有行数/大小上限，日志和异常经 Redactor 脱敏。自动刷新日志窗口每五秒一次。
+
+当前同账号去重是本地上下文键，不能严格识别两个不同目录登录了同一远端账号；以后完善时需新增验收和测试。
+
+额度窗口额外保留 limitId，供 [[auto-routing]] 避免把其他模型 bucket 的耗尽当成 Codex 总额度。常规 UI 查询仍只在窗口打开且启用总开关时执行；用户单独启用的机器人自动路由可在后台按故障和恢复时间查询，是不同调度入口。
+
+产品约束见 [[product-design]]，读写副作用与验证参数见 [[development-guide]]。
