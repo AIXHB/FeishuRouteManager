@@ -2,6 +2,18 @@
 
 Windows 上的 C# / WPF 飞书机器人路由控制台，当前 v0.3.0，统一管理 Codex、Antigravity 和 pi Agent。下载运行包请前往 [GitHub Releases](https://github.com/AIXHB/FeishuRouteManager/releases)，本版变更见 [发布说明](RELEASE-NOTES.md)。
 
+## 在线查看源码
+
+完整源码已直接上传到本仓库的 `main` 分支，无需下载或解压。Release 页面中的 ZIP 是下载附件，查看代码请使用以下入口：
+
+- [全部源码目录](https://github.com/AIXHB/FeishuRouteManager/tree/main)
+- [桌面界面与服务协调（C# / WPF）](RouterManager.App/)，例如 [主窗口代码](RouterManager.App/MainWindow.xaml.cs)
+- [机器人发现、状态与日志（C#）](RouterManager.Core/)
+- [两套飞书桥接源码及补丁](integrations/)
+- [测试代码](RouterManager.Tests/)
+
+也可使用 `git clone https://github.com/AIXHB/FeishuRouteManager.git` 获取完整工程。
+
 开发及 AI 接手从 [AGENTS.md](AGENTS.md) 开始；[开发指南](docs/ref/development-guide.md)、[产品设计](docs/designs/product-design.md)、[架构设计](docs/designs/architecture-design.md)、[部署与迁移](docs/ref/deployment-reference.md) 提供详细说明。文档中的本机绝对路径仅用于维护记录，新机器需配置自己的集成路径。
 
 源码包从工程根执行 `setup-dependencies.ps1` → `build.ps1` → `test.ps1`；`package.ps1` 生成源码和 Windows 两份 ZIP。工程包不包含用户凭据或运行会话。Windows 运行包可直接双击 `app/FeishuRouterManager.exe`，用 `install-start-menu.ps1` 安装开始菜单入口。
