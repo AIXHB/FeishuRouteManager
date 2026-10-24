@@ -2,6 +2,12 @@
 
 Windows 上的 C# / WPF 飞书机器人路由控制台，当前 v0.3.0，统一管理 Codex、Antigravity 和 pi Agent。下载运行包请前往 [GitHub Releases](https://github.com/AIXHB/FeishuRouteManager/releases)，本版变更见 [发布说明](RELEASE-NOTES.md)。
 
+## 界面预览
+
+实际工具界面截图；机器人名称、App ID、本机工作目录及运行标识已遮盖。
+
+![飞书机器人路由控制台界面（个人信息已打码）](docs/assets/router-console-redacted.png)
+
 ## 在线查看源码
 
 完整源码已直接上传到本仓库的 `main` 分支，无需下载或解压。Release 页面中的 ZIP 是下载附件，查看代码请使用以下入口：
